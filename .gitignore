@@ -1,6 +1,5 @@
 .env
 secrets.yml
-subscriptions.yml
 .venv/
 __pycache__/
 .pytest_cache/
@@ -9,5 +8,4 @@ __pycache__/
 dist/
 *.egg-info/
 state.json
-config.yml
 *.log

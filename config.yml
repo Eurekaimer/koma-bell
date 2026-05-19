@@ -1,0 +1,4 @@
+subscriptions_file: subscriptions.yml
+request_interval_seconds:
+  min: 2
+  max: 5

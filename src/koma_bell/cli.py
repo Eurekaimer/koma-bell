@@ -30,7 +30,7 @@ from koma_bell.state import StateStore
 
 app = typer.Typer(invoke_without_command=True, help="Lightweight manga update notifier.")
 console = Console()
-DEFAULT_CONFIG_PATH = default_config_path()
+DEFAULT_CONFIG_PATH = Path("config.yml") if Path("config.yml").exists() else default_config_path()
 DEFAULT_STATE_PATH = default_state_path()
 
 
@@ -247,7 +247,7 @@ def github_setup(
         ensure_config(config)
         cfg = load_config(config)
         credentials = get_mail_credentials()
-        subscriptions_path = default_subscriptions_path()
+        subscriptions_path = _subscriptions_path_for_config(config, cfg.subscriptions_file)
         save_subscriptions(subscriptions_path, cfg.subscriptions)
         config_text = config.read_text(encoding="utf-8")
         subscriptions_text = subscriptions_path.read_text(encoding="utf-8")
@@ -392,14 +392,28 @@ def _print_banner() -> None:
 
 
 def _print_paths(config: Path) -> None:
+    try:
+        cfg = load_config(config)
+        subscriptions_path = _subscriptions_path_for_config(config, cfg.subscriptions_file)
+    except KomaBellError:
+        subscriptions_path = default_subscriptions_path()
     table = Table(title="Local Files")
     table.add_column("Type")
     table.add_column("Path")
     table.add_row("config", str(config))
-    table.add_row("subscriptions", str(default_subscriptions_path()))
+    table.add_row("subscriptions", str(subscriptions_path))
     table.add_row("secrets", str(default_secrets_path()))
     table.add_row("state", str(default_state_path()))
     console.print(table)
+
+
+def _subscriptions_path_for_config(config: Path, subscriptions_file: str | None) -> Path:
+    if subscriptions_file is None:
+        return default_subscriptions_path()
+    path = Path(subscriptions_file)
+    if path.is_absolute():
+        return path
+    return config.parent / path
 
 
 def _print_subscriptions(items: list[Subscription], *, urls_only: bool = False) -> None:

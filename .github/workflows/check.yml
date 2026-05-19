@@ -29,17 +29,19 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-groups
       - name: Write private config from secret
-        if: ${{ env.KOMA_BELL_CONFIG_YML != '' }}
         run: |
-          umask 077
-          printf '%s' "$KOMA_BELL_CONFIG_YML" > config.yml
+          if [ ! -f config.yml ] && [ -n "$KOMA_BELL_CONFIG_YML" ]; then
+            umask 077
+            printf '%s' "$KOMA_BELL_CONFIG_YML" > config.yml
+          fi
       - name: Write private subscriptions from secret
-        if: ${{ env.KOMA_BELL_SUBSCRIPTIONS_YML != '' }}
         run: |
-          umask 077
-          printf '%s' "$KOMA_BELL_SUBSCRIPTIONS_YML" > subscriptions.yml
+          if [ ! -f subscriptions.yml ] && [ -n "$KOMA_BELL_SUBSCRIPTIONS_YML" ]; then
+            umask 077
+            printf '%s' "$KOMA_BELL_SUBSCRIPTIONS_YML" > subscriptions.yml
+          fi
       - name: Ensure config exists
-        run: test -f config.yml
+        run: test -f config.yml && test -f subscriptions.yml
       - name: Run check
         run: uv run koma-bell check --config config.yml --state state.json
       - name: Commit state changes
