@@ -1,9 +1,12 @@
 import random
 import time
+from datetime import date, timedelta
 
 from koma_bell.models import AppConfig, CheckResult, ComicState
 from koma_bell.sources.base import SourceAdapter
 from koma_bell.utils.time import utc_now_iso
+
+RECENT_DAYS = 7
 
 
 class Checker:
@@ -25,11 +28,7 @@ class Checker:
             current = self.source.inspect(subscription)
             previous = states.get(subscription.id)
             is_first_run = previous is None
-            has_changed = (
-                previous is not None
-                and previous.latest_chapter_url != current.latest_chapter.url
-            )
-            has_update = has_changed or (is_first_run and config.first_run_notify)
+            has_update = _is_recent_update(current.updated_at)
             results.append(
                 CheckResult(
                     subscription=subscription,
@@ -53,3 +52,13 @@ class Checker:
                 )
                 self.sleep_func(delay)
         return results, next_states
+
+
+def _is_recent_update(updated_at: str | None) -> bool:
+    if not updated_at:
+        return False
+    try:
+        updated_date = date.fromisoformat(updated_at)
+    except ValueError:
+        return False
+    return updated_date >= date.today() - timedelta(days=RECENT_DAYS)

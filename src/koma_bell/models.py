@@ -17,7 +17,6 @@ class RequestInterval:
 @dataclass(frozen=True)
 class AppConfig:
     subscriptions: list[Subscription]
-    first_run_notify: bool = False
     subscriptions_file: str | None = "subscriptions.yml"
     request_interval_seconds: RequestInterval = RequestInterval()
 

@@ -44,10 +44,8 @@ def load_config(path: Path) -> AppConfig:
     file_subscriptions = _load_subscriptions_file(path, subscriptions_file)
     subscriptions = _merge_subscriptions(file_subscriptions, inline_subscriptions)
     interval = _parse_interval(raw.get("request_interval_seconds"))
-    first_run_notify = bool(raw.get("first_run_notify", False))
     return AppConfig(
         subscriptions=subscriptions,
-        first_run_notify=first_run_notify,
         subscriptions_file=subscriptions_file,
         request_interval_seconds=interval,
     )
@@ -55,7 +53,6 @@ def load_config(path: Path) -> AppConfig:
 
 def save_config(config: AppConfig, path: Path) -> None:
     payload = {
-        "first_run_notify": config.first_run_notify,
         "subscriptions_file": config.subscriptions_file,
         "request_interval_seconds": {
             "min": config.request_interval_seconds.min,
@@ -73,7 +70,6 @@ def add_subscription(path: Path, subscription: Subscription) -> AppConfig:
     subscriptions.sort(key=lambda item: item.id)
     next_config = AppConfig(
         subscriptions=subscriptions,
-        first_run_notify=config.first_run_notify,
         subscriptions_file=config.subscriptions_file or default_subscriptions_path().name,
         request_interval_seconds=config.request_interval_seconds,
     )

@@ -2,7 +2,7 @@
 
 `koma` 来自日语「コマ」，可以指漫画分镜或画格；`bell` 是提醒铃。`koma-bell` 的意思就是“漫画更新铃”：安静地守着你的订阅，有新章节时敲一下铃。
 
-koma-bell 是一个轻量的漫画追更提醒器。当前阶段只做 CLI，不做 GUI/TUI、下载器或阅读器；它会读取本机配置里的漫画订阅，检查每本漫画的最新章节，与 `state.json` 中保存的旧记录比较，如果发现更新，就通过 QQ 邮箱 SMTP 发送邮件提醒。
+koma-bell 是一个轻量的漫画追更提醒器。当前阶段只做 CLI，不做 GUI/TUI、下载器或阅读器；它会读取本机配置里的漫画订阅，检查每本漫画的最新章节。如果网页显示最后更新时间在最近 7 天内，就通过邮箱 SMTP 发送邮件提醒。
 
 这个项目面向个人低频使用，推荐每天运行一次。它不会下载漫画图片，不会绕过反爬，也不会做高频请求。
 
@@ -12,8 +12,8 @@ koma-bell 是一个轻量的漫画追更提醒器。当前阶段只做 CLI，不
 - 从 URL 自动解析漫画名、最新章节标题和章节链接，并写入配置。
 - 支持邮箱 SMTP，当前默认使用 QQ 邮箱 SMTP，菜单保存后可以立刻发送测试邮件。
 - 使用 JSON 状态文件保存每本漫画上次检查到的章节。
-- 第一次运行默认只初始化状态，不发更新邮件。
-- 正式检查时只对最近 7 天内更新的订阅发送提醒，避免旧订阅刷屏。
+- 正式检查时只根据网页最后更新时间判断是否提醒：最近 7 天内更新就发送邮件。
+- `state.json` 只用于保存当前检查状态和给 GitHub Actions 自动提交，不决定是否发邮件。
 - 提供 GitHub Actions 定时检查，每天东八区早上 8 点运行一次。
 - 提供 `github-setup`，可以把本地配置写入 GitHub Actions Secrets。
 
@@ -33,6 +33,7 @@ koma-bell 是一个轻量的漫画追更提醒器。当前阶段只做 CLI，不
 - `NEW` 表示页面上的最后更新日期是今天。
 - 没有解析到最后更新日期时，仍会显示漫画名、最新章节和链接。
 - 最近 7 天之前的更新不会出现在邮件里。
+- 邮件触发不依赖 `state.json` 里的旧章节记录。
 
 ## 未来计划
 
@@ -136,7 +137,6 @@ state         ~/.local/state/koma-bell/state.json
 `config.yml` 保存普通配置，示例：
 
 ```yaml
-first_run_notify: false
 subscriptions_file: subscriptions.yml
 request_interval_seconds:
   min: 2
@@ -153,7 +153,6 @@ request_interval_seconds:
 
 字段说明：
 
-- `first_run_notify`: 第一次运行时是否发送邮件。默认 `false`，也就是首次只初始化 `state.json`。
 - `subscriptions_file`: 订阅列表文件路径。相对路径会相对于 `config.yml` 所在目录解析。
 - `request_interval_seconds.min/max`: 检查多本漫画时，每本之间的等待时间，默认 2 到 5 秒。
 - `subscriptions[].id`: 订阅 ID，必须唯一。后续状态会用这个 ID 关联漫画。
@@ -252,21 +251,15 @@ uv run koma-bell check --dry-run --send-test-mail
 uv run koma-bell state-show
 ```
 
-## 第一次运行
+## 提醒规则
 
-第一次运行时，如果 `state.json` 里还没有某本漫画的记录，koma-bell 会把当前最新章节写入状态文件，并把它视为初始化。
+koma-bell 不靠 `state.json` 的旧章节记录判断是否发邮件。正式检查时，它只看漫画详情页解析到的 `最后更新`：
 
-默认配置：
+- 最后更新时间在最近 7 天内：发送邮件。
+- 最后更新时间早于最近 7 天：不发送邮件。
+- 没有解析到最后更新时间：不发送正式更新邮件，但 `check --dry-run --send-test-mail` 仍可用于发送预览测试。
 
-```yaml
-first_run_notify: false
-```
-
-这种情况下首次运行不会发送“发现更新”邮件。这样可以避免第一次启动时把所有订阅都当作更新。如果你确实希望首次运行也发邮件，改成：
-
-```yaml
-first_run_notify: true
-```
+`state.json` 仍会保存当前最新章节，用于查看状态和让 GitHub Actions 自动 commit 检查结果。
 
 ## GitHub Actions 定时运行
 
@@ -288,7 +281,6 @@ MAIL_TO
 `KOMA_BELL_CONFIG_YML` 填普通配置内容，例如：
 
 ```yaml
-first_run_notify: false
 subscriptions_file: subscriptions.yml
 request_interval_seconds:
   min: 2
