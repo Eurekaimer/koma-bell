@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "comics": {
+    "test-comic": {
+      "title": "测试漫画",
+      "url": "https://www.copymanga.tv/comic/test",
+      "latest_chapter_title": "第 11 话 旧记录",
+      "latest_chapter_url": "https://www.copymanga.tv/comic/test/chapter/old",
+      "checked_at": "2026-05-17T00:00:00+00:00"
+    }
+  }
+}

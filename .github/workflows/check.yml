@@ -1,0 +1,53 @@
+name: Daily Check
+
+on:
+  workflow_dispatch:
+  schedule:
+    # GitHub cron uses UTC. This is 08:00 in Asia/Shanghai.
+    - cron: "0 0 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      MAIL_USER: ${{ secrets.MAIL_USER }}
+      MAIL_AUTH_CODE: ${{ secrets.MAIL_AUTH_CODE }}
+      MAIL_TO: ${{ secrets.MAIL_TO }}
+      KOMA_BELL_CONFIG_YML: ${{ secrets.KOMA_BELL_CONFIG_YML }}
+      KOMA_BELL_SUBSCRIPTIONS_YML: ${{ secrets.KOMA_BELL_SUBSCRIPTIONS_YML }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+      - name: Install dependencies
+        run: uv sync --all-groups
+      - name: Write private config from secret
+        if: ${{ env.KOMA_BELL_CONFIG_YML != '' }}
+        run: |
+          umask 077
+          printf '%s' "$KOMA_BELL_CONFIG_YML" > config.yml
+      - name: Write private subscriptions from secret
+        if: ${{ env.KOMA_BELL_SUBSCRIPTIONS_YML != '' }}
+        run: |
+          umask 077
+          printf '%s' "$KOMA_BELL_SUBSCRIPTIONS_YML" > subscriptions.yml
+      - name: Ensure config exists
+        run: test -f config.yml
+      - name: Run check
+        run: uv run koma-bell check --config config.yml --state state.json
+      - name: Commit state changes
+        run: |
+          if ! git diff --quiet -- state.json || [ -n "$(git status --porcelain -- state.json)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -f state.json
+            git commit -m "chore: update koma-bell state"
+            git push
+          fi

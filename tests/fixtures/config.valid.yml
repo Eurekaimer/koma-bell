@@ -1,0 +1,5 @@
+first_run_notify: false
+subscriptions_file: subscriptions.valid.yml
+request_interval_seconds:
+  min: 0
+  max: 0

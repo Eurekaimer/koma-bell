@@ -1,0 +1,13 @@
+.env
+secrets.yml
+subscriptions.yml
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.pyright/
+dist/
+*.egg-info/
+state.json
+config.yml
+*.log
