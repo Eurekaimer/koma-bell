@@ -115,6 +115,23 @@ def paths() -> None:
     _print_paths(DEFAULT_CONFIG_PATH)
 
 
+@app.command("subscriptions")
+def subscriptions(
+    config: Annotated[Path, typer.Option("--config", exists=False)] = DEFAULT_CONFIG_PATH,
+    urls_only: Annotated[
+        bool,
+        typer.Option("--urls-only", help="Print only subscription URLs."),
+    ] = False,
+) -> None:
+    """Show all configured subscription URLs."""
+    try:
+        ensure_config(config)
+        cfg = load_config(config)
+    except KomaBellError as exc:
+        _fail(str(exc))
+    _print_subscriptions(cfg.subscriptions, urls_only=urls_only)
+
+
 @app.command("banner")
 def banner() -> None:
     """Show the koma-bell banner."""
@@ -271,14 +288,13 @@ def run_menu() -> None:
     _print_paths(DEFAULT_CONFIG_PATH)
     while True:
         console.print()
-        console.print("1. 配置邮箱 SMTP")
-        console.print("2. 添加漫画订阅（URL 自动解析，失败可手动填写）")
-        console.print("3. 检查更新")
-        console.print("4. Dry-run 检查")
-        console.print("5. 查看状态")
-        console.print("6. 发送邮箱连通测试")
-        console.print("7. 发送检查结果预览邮件")
-        console.print("8. 写入 GitHub Actions Secrets")
+        console.print("1. 配置邮箱")
+        console.print("2. 添加订阅")
+        console.print("3. 查看订阅 URL")
+        console.print("4. 立即检查，有最近更新就发邮件")
+        console.print("5. 发送一封预览测试邮件")
+        console.print("6. 同步配置到 GitHub Actions")
+        console.print("7. 查看本机文件位置")
         console.print("0. 退出")
         choice = typer.prompt("请选择", default="0")
         if choice == "1":
@@ -286,27 +302,25 @@ def run_menu() -> None:
         elif choice == "2":
             _menu_add_subscription()
         elif choice == "3":
-            check(config=DEFAULT_CONFIG_PATH, state=DEFAULT_STATE_PATH, dry_run=False)
+            subscriptions(config=DEFAULT_CONFIG_PATH)
         elif choice == "4":
-            check(config=DEFAULT_CONFIG_PATH, state=DEFAULT_STATE_PATH, dry_run=True)
+            check(config=DEFAULT_CONFIG_PATH, state=DEFAULT_STATE_PATH, dry_run=False)
         elif choice == "5":
-            state_show(state=DEFAULT_STATE_PATH)
-        elif choice == "6":
-            mail_test(config=DEFAULT_CONFIG_PATH)
-        elif choice == "7":
             check(
                 config=DEFAULT_CONFIG_PATH,
                 state=DEFAULT_STATE_PATH,
                 dry_run=True,
                 send_test_mail=True,
             )
-        elif choice == "8":
+        elif choice == "6":
             repo = typer.prompt("GitHub 仓库（owner/name）")
             github_setup(repo=repo, config=DEFAULT_CONFIG_PATH)
+        elif choice == "7":
+            _print_paths(DEFAULT_CONFIG_PATH)
         elif choice == "0":
             raise typer.Exit()
         else:
-            console.print("[yellow]请输入 0 到 8。[/yellow]")
+            console.print("[yellow]请输入 0 到 7。[/yellow]")
 
 
 def _configure_menu() -> None:
@@ -385,6 +399,23 @@ def _print_paths(config: Path) -> None:
     table.add_row("subscriptions", str(default_subscriptions_path()))
     table.add_row("secrets", str(default_secrets_path()))
     table.add_row("state", str(default_state_path()))
+    console.print(table)
+
+
+def _print_subscriptions(items: list[Subscription], *, urls_only: bool = False) -> None:
+    if not items:
+        console.print("[yellow]还没有订阅。[/yellow]")
+        return
+    if urls_only:
+        for item in sorted(items, key=lambda value: value.id):
+            console.print(item.url)
+        return
+    table = Table(title="Subscriptions")
+    table.add_column("ID")
+    table.add_column("Comic")
+    table.add_column("URL")
+    for item in sorted(items, key=lambda value: value.id):
+        table.add_row(item.id, item.name or "", item.url)
     console.print(table)
 
 

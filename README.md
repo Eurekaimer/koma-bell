@@ -87,14 +87,13 @@ uv run koma-bell
 #                                                                              #
 ################################################################################
 
-1. 配置邮箱 SMTP
-2. 添加漫画订阅（URL 自动解析，失败可手动填写）
-3. 检查更新
-4. Dry-run 检查
-5. 查看状态
-6. 发送邮箱连通测试
-7. 发送检查结果预览邮件
-8. 写入 GitHub Actions Secrets
+1. 配置邮箱
+2. 添加订阅
+3. 查看订阅 URL
+4. 立即检查，有最近更新就发邮件
+5. 发送一封预览测试邮件
+6. 同步配置到 GitHub Actions
+7. 查看本机文件位置
 0. 退出
 ```
 
@@ -105,8 +104,9 @@ uv run koma-bell
 1. 运行 `uv run koma-bell`。
 2. 选择 `1`，输入 QQ 邮箱、SMTP 授权码、接收提醒的邮箱。
 3. 选择 `2`，粘贴漫画详情页 URL，例如 `https://www.mangacopy.com/comic/xiangbendangaobai`。
-4. 选择 `4`，先 dry-run 检查，不发邮件、不写状态。
-5. 确认没问题后选择 `3` 正式检查。
+4. 选择 `3`，确认订阅 URL 已经保存。
+5. 选择 `5`，先发一封预览测试邮件，不写状态。
+6. 确认没问题后选择 `4` 正式检查，有最近更新就发邮件。
 
 > [!TIP]
 > `接收提醒的邮箱 [你的QQ邮箱]:` 这一行如果直接按回车，就是把提醒发给你自己的 QQ 邮箱。只有想发给其他邮箱时才需要输入另一个地址。
@@ -207,6 +207,13 @@ uv run koma-bell inspect "https://www.mangacopy.com/comic/xiangbendangaobai"
 
 ```bash
 uv run koma-bell add "https://www.mangacopy.com/comic/xiangbendangaobai"
+```
+
+查看所有订阅 URL：
+
+```bash
+uv run koma-bell subscriptions
+uv run koma-bell subscriptions --urls-only
 ```
 
 如果 URL 当前抓不到元数据，可以手动指定漫画名：

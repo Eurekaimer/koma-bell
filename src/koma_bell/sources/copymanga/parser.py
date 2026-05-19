@@ -143,7 +143,27 @@ def _extract_updated_at(page_text: str) -> str | None:
 def _extract_chapter_from_title(text: str | None) -> str | None:
     if not text:
         return None
-    for part in (item.strip() for item in text.split("-")):
+    parts = [item.strip() for item in text.split("-") if item.strip()]
+    for part in parts:
         if part.startswith("第") and ("話" in part or "话" in part):
             return part
+    for part in parts[1:]:
+        if _looks_like_chapter_title(part):
+            return part
     return None
+
+
+def _looks_like_chapter_title(text: str) -> bool:
+    ignored = (
+        "連載中",
+        "连载中",
+        "完結",
+        "完结",
+        "漫画",
+        "漫畫",
+        "在线阅读",
+        "在線閱讀",
+        "拷貝漫畫",
+        "拷贝漫画",
+    )
+    return bool(text) and not any(marker in text for marker in ignored)
