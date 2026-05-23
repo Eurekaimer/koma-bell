@@ -1,6 +1,15 @@
+- id: errenbashi
+  name: 二人巴士
+  url: https://www.mangacopy.com/comic/errenbashi
+- id: huaxunlingran
+  name: 花薰凜然
+  url: https://www.mangacopy.com/comic/huaxunlingran
 - id: lianyuqingchang
   name: 戀語輕唱
   url: https://www.mangacopy.com/comic/lianyuqingchang
+- id: puweijunhao
+  name: 譜為君嗥
+  url: https://www.mangacopy.com/comic/puweijunhao
 - id: shangyinamudanjiuzuishenzisibaihehuaban
   name: 上伊那牡丹，酒醉身姿似百合花般
   url: https://www.mangacopy.com/comic/shangyinamudanjiuzuishenzisibaihehuaban
@@ -13,3 +22,6 @@
 - id: xiangchidiaowodefeirenshaonv
   name: 想吃掉我的非人少女
   url: https://www.mangacopy.com/comic/xiangchidiaowodefeirenshaonv
+- id: yinweijintiannvyoubuzaijia
+  name: 因為今天女友不在
+  url: https://www.mangacopy.com/comic/yinweijintiannvyoubuzaijia
