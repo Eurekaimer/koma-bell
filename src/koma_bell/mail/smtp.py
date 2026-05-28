@@ -1,4 +1,5 @@
 import smtplib
+import time
 from collections.abc import Callable
 from email.message import EmailMessage
 from smtplib import (
@@ -17,13 +18,18 @@ SMTP_HOST = "smtp.qq.com"
 SMTP_PORT = 465
 SMTP_STARTTLS_PORT = 587
 SMTP_TIMEOUT = 10
+SMTP_SEND_ATTEMPTS = 3
+SMTP_RETRY_DELAY_SECONDS = 30
 
 
 class SMTPMailer:
-    def __init__(self, user: str, auth_code: str, to: str) -> None:
+    def __init__(
+        self, user: str, auth_code: str, to: str, *, attempts: int = SMTP_SEND_ATTEMPTS
+    ) -> None:
         self.user = user
         self.auth_code = auth_code
         self.to = to
+        self.attempts = max(1, attempts)
 
     @classmethod
     def from_env(cls) -> "SMTPMailer":
@@ -49,14 +55,23 @@ class SMTPMailer:
         message["Subject"] = subject
         message.set_content(body)
         errors: list[str] = []
-        for sender in (self._send_ssl, self._send_starttls):
-            try:
-                sender(message, progress)
-                return
-            except NotifyError as exc:
-                errors.append(str(exc))
-                _progress(progress, f"失败：{exc}")
-        raise NotifyError("Mail send failed. " + " | ".join(errors))
+        for attempt in range(1, self.attempts + 1):
+            for sender in (self._send_ssl, self._send_starttls):
+                try:
+                    sender(message, progress)
+                    return
+                except NotifyError as exc:
+                    errors.append(f"attempt {attempt}/{self.attempts}: {exc}")
+                    _progress(progress, f"mail send failed: {exc}")
+                    if not _is_retryable_notify_error(exc):
+                        raise NotifyError("Mail send failed. " + " | ".join(errors)) from exc
+            if attempt < self.attempts:
+                delay = SMTP_RETRY_DELAY_SECONDS * (2 ** (attempt - 1))
+                _progress(progress, f"retrying mail send in {delay} seconds...")
+                time.sleep(delay)
+        raise NotifyError(
+            f"Mail send failed after {self.attempts} attempts. " + " | ".join(errors)
+        )
 
     def _send_ssl(
         self,
@@ -113,6 +128,20 @@ def _raise_notify_error(exc: BaseException) -> None:
     if isinstance(exc, (OSError, SMTPException)):
         raise NotifyError(f"{type(exc).__name__}: {exc}") from exc
     raise NotifyError(f"{type(exc).__name__}: {exc}") from exc
+
+
+def _is_retryable_notify_error(exc: NotifyError) -> bool:
+    message = str(exc)
+    if message.startswith(
+        ("SMTP authentication failed", "SMTP rejected sender", "SMTP rejected recipient")
+    ):
+        return False
+    if message.startswith("SMTP error: "):
+        code = message.removeprefix("SMTP error: ").split(maxsplit=1)[0]
+        if code.isdigit():
+            return code.startswith("4")
+        return True
+    return True
 
 
 def _progress(progress: Callable[[str], None] | None, message: str) -> None:
