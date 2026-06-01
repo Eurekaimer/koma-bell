@@ -6,6 +6,9 @@
 
 现在只有 CLI，功能也很简单，就是个人用来少刷几次网页。
 
+目前支持 CopyManga 漫画详情页 URL，地址里需要包含 `/comic/{comic_id}`。
+除了本地手动检查，也可以交给 GitHub Actions 每天定时运行。
+
 ## 安装
 
 需要 Python `>=3.12` 和 `uv`。
@@ -49,6 +52,9 @@ uv run koma-bell
 # 添加订阅
 uv run koma-bell add "https://www.mangacopy.com/comic/xiangbendangaobai"
 
+# 查看单个详情页能否正确解析
+uv run koma-bell inspect "https://www.mangacopy.com/comic/xiangbendangaobai"
+
 # 查看订阅
 uv run koma-bell subscriptions
 
@@ -66,16 +72,21 @@ uv run koma-bell paths
 
 # 测试邮箱配置
 uv run koma-bell mail-test
+
+# 查看已经保存的检查状态
+uv run koma-bell state-show
 ```
 
 ## 配置
 
-默认会优先读当前目录里的：
+如果当前目录里存在 `config.yml`，会优先读取它；否则使用：
 
 ```text
-config.yml
-subscriptions.yml
+~/.config/koma-bell/config.yml
 ```
+
+`subscriptions.yml` 的位置由 `config.yml` 里的 `subscriptions_file` 决定。使用相对路径时，
+它会相对于 `config.yml` 所在目录解析。
 
 `subscriptions.yml` 大概这样写：
 
@@ -87,21 +98,35 @@ subscriptions.yml
 
 `id` 用来区分订阅，`name` 是邮件里显示的名字，`url` 是漫画详情页。
 
+邮箱授权码保存在 `~/.config/koma-bell/secrets.yml`，检查状态默认保存在
+`~/.local/state/koma-bell/state.json`。运行 `uv run koma-bell paths` 可以查看当前实际使用的路径。
+
 ## GitHub Actions
 
-仓库里带了定时检查 workflow。想让它每天自动跑的话，把 `config.yml` 和 `subscriptions.yml` 放进仓库，再在 GitHub Actions Secrets 里加：
+仓库里带了定时检查 workflow：每天北京时间 `08:00` 自动运行，也可以在 Actions 页面手动触发。
+
+最省事的配置方式是先安装并登录 GitHub CLI，然后把本地配置同步到 Actions Secrets：
+
+```bash
+gh auth login
+uv run koma-bell github-setup --repo OWNER/REPO
+```
+
+这个命令会写入：
 
 ```text
+KOMA_BELL_CONFIG_YML
+KOMA_BELL_SUBSCRIPTIONS_YML
 MAIL_USER
 MAIL_AUTH_CODE
 MAIL_TO
 ```
 
-也可以用命令写入：
+workflow 启动时，如果仓库里没有 `config.yml` 或 `subscriptions.yml`，会从前两个 Secrets
+恢复配置。也可以直接把这两个不含邮箱授权码的文件提交进仓库；仓库内文件存在时会优先使用。
+邮箱授权码不要提交进仓库。
 
-```bash
-uv run koma-bell github-setup --repo OWNER/REPO
-```
+每次检查结束后，workflow 会更新并自动提交 `state.json`，方便保留最近一次检查结果。
 
 ## 提醒规则
 
